@@ -5,6 +5,7 @@ import re
 import os
 import base64
 import time
+import random
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -176,7 +177,7 @@ def send_emails():
         selected_indices = data.get('selected', [])
         recipients = [session['data'][i] for i in selected_indices if i < len(session['data'])]
     else:  # mass
-        recipients = session['data'][:50]  # Limite à 50
+        recipients = session['data'][:50]
     
     # Envoi des emails
     sent_count = 0
@@ -227,7 +228,7 @@ def send_emails():
                 
                 # Délai entre envois
                 if send_type == 'mass' and i < len(recipients) - 1:
-                    time.sleep(3)
+                    time.sleep(random.randint(4, 10))
                     
             except Exception as e:
                 errors.append(f"Erreur pour {email_addr}: {str(e)}")
