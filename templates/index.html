@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobSender Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <h1>📧 JobSender Pro</h1>
+        <div class="badge">v2.0</div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <div class="glass-card">
+                <h3>📊 Statistiques</h3>
+                <div class="stat-item">
+                    <span>Entreprises:</span>
+                    <span id="stat-companies">0</span>
+                </div>
+                <div class="stat-item">
+                    <span>Emails envoyés:</span>
+                    <span id="stat-sent">0</span>
+                </div>
+            </div>
+            
+            <div class="glass-card">
+                <h3>⚡ Actions rapides</h3>
+                <button onclick="exportData()" class="btn-secondary">📥 Exporter CSV</button>
+                <button onclick="cleanEmails()" class="btn-secondary">🧹 Nettoyer emails</button>
+                <button onclick="resetData()" class="btn-danger">🔄 Reset</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Upload Section -->
+            <section class="glass-card fade-in">
+                <h2>📁 Chargement de fichier</h2>
+                <div class="upload-area">
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display: none;">
+                    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                        <p>Cliquez pour sélectionner un fichier Excel ou CSV</p>
+                        <small>Formats supportés: .xlsx, .xls, .csv</small>
+                    </div>
+                </div>
+                <div id="filePreview" class="file-preview" style="display: none;"></div>
+            </section>
+
+            <!-- Column Mapping -->
+            <section class="glass-card fade-in" id="mappingSection" style="display: none;">
+                <h2>🔗 Mapping des colonnes</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <select id="emailColumn"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom contact:</label>
+                        <select id="nameColumn"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Entreprise:</label>
+                        <select id="companyColumn"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Secteur:</label>
+                        <select id="sectorColumn"></select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SMTP Config -->
+            <section class="glass-card fade-in" id="smtpSection" style="display: none;">
+                <h2>📡 Configuration SMTP</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Votre email:</label>
+                        <input type="email" id="smtpEmail" placeholder="votre.email@gmail.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe d'application:</label>
+                        <input type="password" id="smtpPassword" placeholder="Mot de passe">
+                    </div>
+                    <div class="form-group">
+                        <label>Fournisseur:</label>
+                        <select id="smtpProvider" onchange="updateSmtpConfig()">
+                            <option value="Gmail">Gmail</option>
+                            <option value="Outlook">Outlook</option>
+                            <option value="Yahoo">Yahoo</option>
+                            <option value="Custom">Personnalisé</option>
+                        </select>
+                    </div>
+                    <div class="form-group custom-smtp" style="display: none;">
+                        <label>Serveur SMTP:</label>
+                        <input type="text" id="smtpServer" placeholder="smtp.example.com">
+                    </div>
+                    <div class="form-group custom-smtp" style="display: none;">
+                        <label>Port:</label>
+                        <input type="number" id="smtpPort" placeholder="587">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Email Template -->
+            <section class="glass-card fade-in" id="templateSection" style="display: none;">
+                <h2>✉️ Template d'email</h2>
+                <div class="form-group">
+                    <label>Sujet:</label>
+                    <input type="text" id="emailSubject" placeholder="Opportunité de collaboration - {entreprise}">
+                </div>
+                <div class="form-group">
+                    <label>Corps du message:</label>
+                    <textarea id="emailTemplate" rows="10" placeholder="Bonjour {nom},
+
+Je me permets de vous contacter concernant {entreprise}...
+
+**Gras** *Italique* ==Surligné=="></textarea>
+                </div>
+                
+                <div class="attachment-section">
+                    <h3>📎 Pièces jointes</h3>
+                    <input type="file" id="attachmentInput" multiple accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="display: none;">
+                    <button onclick="document.getElementById('attachmentInput').click()" class="btn-secondary">Ajouter fichier</button>
+                    <div id="attachmentList" class="attachment-list"></div>
+                </div>
+            </section>
+
+            <!-- Preview -->
+            <section class="glass-card fade-in" id="previewSection" style="display: none;">
+                <h2>👁️ Prévisualisation</h2>
+                <div class="form-group">
+                    <label>Aperçu pour l'entreprise:</label>
+                    <select id="previewSelect" onchange="updatePreview()"></select>
+                </div>
+                <div id="emailPreview" class="email-preview"></div>
+            </section>
+
+            <!-- Send Emails -->
+            <section class="glass-card fade-in" id="sendSection" style="display: none;">
+                <h2>🚀 Envoi d'emails</h2>
+                <div class="send-options">
+                    <button onclick="sendEmails('test')" class="btn-secondary">🧪 Test (1 email)</button>
+                    <button onclick="sendEmails('selected')" class="btn-primary">📤 Envoi sélectif</button>
+                    <button onclick="sendEmails('mass')" class="btn-primary">📬 Envoi massif (max 50)</button>
+                </div>
+                
+                <div id="sendProgress" class="progress-section" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="sendStatus" class="send-status"></div>
+                </div>
+                
+                <div id="sendResults" class="send-results" style="display: none;"></div>
+            </section>
+
+            <!-- Statistics -->
+            <section class="glass-card fade-in" id="statsSection" style="display: none;">
+                <h2>📈 Statistiques</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3 id="totalCompanies">0</h3>
+                        <p>Entreprises</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="validEmails">0</h3>
+                        <p>Emails valides</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="completeness">0%</h3>
+                        <p>Complétude</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3 id="emailsSent">0</h3>
+                        <p>Emails envoyés</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sectorChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Tips -->
+            <section class="glass-card fade-in">
+                <h2>💡 Conseils</h2>
+                <ul>
+                    <li>Utilisez des mots de passe d'application pour Gmail/Outlook</li>
+                    <li>Personnalisez vos messages avec {nom}, {entreprise}, etc.</li>
+                    <li>Testez toujours avec un email avant l'envoi massif</li>
+                    <li>Respectez un délai entre les envois pour éviter le spam</li>
+                </ul>
+            </section>
+        </main>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notifications" class="notifications"></div>
+    
+    <!-- Easter Egg -->
+    <div id="celebration" class="celebration" style="display: none;">🎉</div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
