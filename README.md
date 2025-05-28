@@ -171,6 +171,6 @@ En cas de problème :
 
 ---
 
-**Version** : 2.0  
+**Version** : 1.0  
 **Licence** : MIT  
 **Auteur** : JobSender Pro Team
